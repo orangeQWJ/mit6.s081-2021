@@ -1,16 +1,6 @@
-# To compile and run with a lab solution, set the lab name in lab.mk
-# (e.g., LAB=util).  Run make grade to test solution with the lab's
-# grade script (e.g., grade-lab-util).
-
 -include conf/lab.mk
-
-# KU 分别用来存放内核源代码和用户代码的目录路径
 K=kernel
 U=user
-#🤔   OBJS 变量用来干什么呢
-#🤖   OBJS变量用来存储内核源代码文件的目标文件，其目录路径与每次构建的源代码路径相对应。这些
-#     
-#目标文件用于生成内核二进制文件。                                                           
 OBJS = \
   $K/entry.o \
   $K/kalloc.o \
@@ -34,38 +24,25 @@ OBJS = \
   $K/kernelvec.o \
   $K/plic.o \
   $K/virtio_disk.o
-
-#🤔   OBJS_KCSAN变量是干嘛用的
-#🤖   OBJS_KCSAN 变量是用于定义内核代码在开启 KCSAN 工具编译时需要编译的文件列表。          
-#     
-#
-#KCSAN 工具是一个内核代码的并发错误检测工具，当开启 KCSAN                                   
-#工具编译时，编译器会根据OBJS变量中列出的文件编译内核执行文件，同时会编译 OBJS_KCSAN        
 OBJS_KCSAN = \
   $K/start.o \
   $K/console.o \
   $K/printf.o \
   $K/uart.o \
   $K/spinlock.o
-
 ifdef KCSAN
 OBJS_KCSAN += \
 	$K/kcsan.o
 endif
-
-# 不同的lab需要编译更多的内核
 ifeq ($(LAB),pgtbl)
 OBJS += \
 	$K/vmcopyin.o
 endif
-
 ifeq ($(LAB),$(filter $(LAB), pgtbl lock))
 OBJS += \
 	$K/stats.o\
 	$K/sprintf.o
 endif
-
-
 ifeq ($(LAB),net)
 OBJS += \
 	$K/e1000.o \
@@ -73,23 +50,6 @@ OBJS += \
 	$K/sysnet.o \
 	$K/pci.o
 endif
-
-
-# riscv64-unknown-elf- or riscv64-linux-gnu-
-# perhaps in /opt/riscv/bin
-#TOOLPREFIX = 
-
-# Try to infer the correct TOOLPREFIX if not set
-#
-
-#TOOLPREFIX变量用于指定编译代码时使用的工具链。具体来说，如果该变量未设置，则会尝试推断
-#出正 
-#的工具链（TOOLPREFIX）。对于 64 位 RISC-V                                                  
-#架构，可以具体采用三种工具链：riscv64-unknown-elf-, riscv64-linux-gnu-,                    
-#riscv64-unknown-linux-gnu-。程序将按照这样的顺序检查这些工具链是否存在。如                 
-#果存在，则会将首个找到的工具链作为                                                         
-#TOOLPREFIX。但如果实在找不到对应的工具链，编译就会失败并输出相应的错误信息。               
-ifndef TOOLPREFIX
 TOOLPREFIX := $(shell if riscv64-unknown-elf-objdump -i 2>&1 | grep 'elf64-big' >/dev/null 2>&1; \
 	then echo 'riscv64-unknown-elf-'; \
 	elif riscv64-linux-gnu-objdump -i 2>&1 | grep 'elf64-big' >/dev/null 2>&1; \
@@ -107,48 +67,9 @@ QEMU = qemu-system-riscv64
 CC = $(TOOLPREFIX)gcc
 AS = $(TOOLPREFIX)gas
 LD = $(TOOLPREFIX)ld
-#🤔   OBJCOPY 变量指向的工具是干什么用的
-#🤖   OBJCOPY                                                           
-#     
-#变量指向的工具是用于对二进制或目标文件进行复制、转换或修剪的程序。在   
-#Makefile 中，OBJCOPY 用于将目标文件复制为另一个文件，例如将 ELF 格式的 
-#kernel 文件复制为虚拟机可以使用的二进制格式的 kernel                   
-#文件。通常情况下，OBJCOPY 与 LD 配合使用，LD                           
-#会将其他目标文件链接到内核文件中，OBJCOPY                              
-#用于最终生成可供虚拟机使用的二进制文件。                               
 OBJCOPY = $(TOOLPREFIX)objcopy
-
-#🤔   OBJDUMP 变量指向的工具是干什么用的
-#🤖   OBJDUMP是一个用来查看目标文件和可执行文件内容的工具，可以查看各节(
-#secti
-#)的内容、符号表(symbol                                                 
-#table)信息、重定位(relocation)表信息以及汇编代码等。依赖于该           
-#变量的命令将使用OBJDUMP来生成汇编代码等信息的打印结果。                
 OBJDUMP = $(TOOLPREFIX)objdump
 
-#🤔   CFLAGS 变量的含义是什么
-#🤖   CFLAGS变量是用来设置C编译器c的编译选项的，具体包括：              
-#     
-#
-# • -Wall: 启用所有警告。                                               
-# • -Werror: 将所有警告视为错误。                                       
-# • -O：指示编译器使用优化，即通常所说的“优化代码”。这是用于生产环境    
-#   的代码，在性能和空间需求之间取得最佳平衡。                          
-# • -fno-omit-frame-pointer:                                            
-#   禁止编译器优化掉堆栈帧指针，以便在调试时跟踪函数调用。              
-# • -ggdb: 为GDB生成调试符号，这些符号可以在调试器中使用。              
-# • -mcmodel = medany：表示使用任意的内存映射模式                       
-# • -ffreestanding: 如不指定此参数，gcc 将以一般操作系统在 x86/x64      
-#   上所使用的方式来假定程序将由链接器与操作系统一起工作。而此参数便是告
-#   诉 GCC 不要做任何主机环境相关的假设。                               
-# • -fno-common:                                                        
-#   关闭地址初始值为0的全局变量定义在BSS段节省存储空间的优化,           
-#   强制所有全局变量定义在数据段，不管它是否被初始化。                  
-# • -nostdlib: 不使用默认的C库，完全由用户编写的库构建所需的代码。      
-# • -mno-relax:                                                         
-#   不进行链接地址优化，保证链接地址与编译器生成的符号地址一致。        
-# • -I: 指定头文件                                                      
-#
 CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
 
 ifdef LAB

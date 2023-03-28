@@ -34,8 +34,10 @@ void
 freerange(void *pa_start, void *pa_end)
 {
   char *p;
+  // p是找到的,地址最小的干净页块
   p = (char*)PGROUNDUP((uint64)pa_start);
   for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
+	// p 指向第一个干净的块,到以后一个待分配的块的起始位置
     kfree(p);
 }
 
@@ -53,10 +55,15 @@ kfree(void *pa)
 
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
+  // 0000 0001
+  // 0000 0001
+  // 0000 0001
+  // 0000 0001
 
   r = (struct run*)pa;
 
   acquire(&kmem.lock);
+	// 头插法
   r->next = kmem.freelist;
   kmem.freelist = r;
   release(&kmem.lock);

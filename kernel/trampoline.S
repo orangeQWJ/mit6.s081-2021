@@ -63,6 +63,7 @@ uservec:
 	# save the user a0 in p->trapframe->a0
         csrr t0, sscratch
         sd t0, 112(a0)
+	# 至此所有的寄存器都被保存到trapframe中了
 
         # restore kernel stack pointer from p->trapframe->kernel_sp
         ld sp, 8(a0)

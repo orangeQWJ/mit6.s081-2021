@@ -7,6 +7,9 @@ memset(void *dst, int c, uint n)
   int i;
   for(i = 0; i < n; i++){
     cdst[i] = c;
+		//c:   0b (0000)*7  0001
+		//[i]: 0b 0000 00001
+		//[i]: 0x 01
   }
   return dst;
 }

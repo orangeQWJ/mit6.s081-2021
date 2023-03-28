@@ -35,6 +35,7 @@ kvmmake(void)
 
   // map kernel text executable and read-only.
   kvmmap(kpgtbl, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+//kvmmap(pagetable_t kpgtbl, uint64 va, uint64 pa, uint64 sz, int perm)
 
   // map kernel data and the physical RAM we'll make use of.
   kvmmap(kpgtbl, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
@@ -144,7 +145,12 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
     panic("mappages: size");
   
   a = PGROUNDDOWN(va);
+  // va + size -1 需要映射的最后一字节地址
+  // satrt 1
+  // size  2 
+  // end   1 + 2 -1 = 2
   last = PGROUNDDOWN(va + size - 1);
+  // a, last 分别是需要映射的第一个和最后一个页的起始位置
   for(;;){
     if((pte = walk(pagetable, a, 1)) == 0)
       return -1;

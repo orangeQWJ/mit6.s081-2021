@@ -336,7 +336,77 @@ sfence_vma()
 #define PGSHIFT 12  // bits of offset within a page
 
 #define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))
+// 4096 = 2^12  1000 0000 0000
+// 4096 -1      0111 1111 1111
+// ~(4096 -1)   1000 0000 0000
+// & - 的效果是什么? 只保留最高位
+// 16 进制不直观?  9  10 12 16 18 19 20 21
+//  + 9            18 19 21 25 27 28 29 30
+//  只保留最高位   10 10 20 20 20 20 20 30
+//
+// 21
+// 20
+// =====
+// 19
+// 18
+// 17
+// 16
+// 15
+// 14 
+// 13
+// 12
+// 11
+// 10
+// =====
+// 9
+// 8
+// 7
+// 6
+// 5
+// 4
+// 3
+// 2
+// 1
+// 0
+//
+// 结论:
+//		1. sz是新页块的开始,返回页块的开始
+//		2. sz不是页块的开始,返回下一个页块的开始
+//		3. 返回页块的开始
+//		4. 找到最近的,没有用过的干净页块
 #define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))
+// 4096 = 2^12  1000 0000 0000
+// 4096 -1      0111 1111 1111
+// ~(4096 -1)   1000 0000 0000
+// & - 的效果是什么? 只保留最高位
+// 16 进制不直观?  9  10 12 16 18 19 20 21
+//  只保留最高位   0  10 10 10 10 10 20 20
+// 21
+// 20
+// =====
+// 19
+// 18
+// 17
+// 16
+// 15
+// 14 
+// 13
+// 12
+// 11
+// 10
+// =====
+// 9
+// 8
+// 7
+// 6
+// 5
+// 4
+// 3
+// 2
+// 1
+// 0
+// 结论:
+//		返回所在页的起始位置
 
 #define PTE_V (1L << 0) // valid
 #define PTE_R (1L << 1)
@@ -348,19 +418,41 @@ sfence_vma()
 #define PA2PTE(pa) ((((uint64)pa) >> 12) << 10)
 
 #define PTE2PA(pte) (((pte) >> 10) << 12)
+// 物理空间 2^56 
+// pte 格式
+// PNN    44
+// Flags  10
+
+// 每一个物理页表,都是4k对齐的.地址都是 x * 2^12
 
 #define PTE_FLAGS(pte) ((pte) & 0x3FF)
 
 // extract the three 9-bit page table indices from a virtual address.
 #define PXMASK          0x1FF // 9 bits
 #define PXSHIFT(level)  (PGSHIFT+(9*(level)))
+
 #define PX(level, va) ((((uint64) (va)) >> PXSHIFT(level)) & PXMASK)
+// 64位虚拟地址结构
+// EXT     10     
+// L2      9     PXSHIFT(2) = 12 + 2 * 9
+// L1      9     PXSHIFT(1) = 12 + 1 * 9
+// L0      9     PXSHIFT(0) = 12 + 0 * 9
+// Offset  12
+// & PXMASK 效果: 只保留低9位,高位清零
+// 结论:
+//		返回虚拟地址,在第level级页表中的PTE的索引
 
 // one beyond the highest possible virtual address.
 // MAXVA is actually one bit less than the max allowed by
 // Sv39, to avoid having to sign-extend virtual addresses
 // that have the high bit set.
 #define MAXVA (1L << (9 + 9 + 9 + 12 - 1))
+// Sv39  最大地址 111....111  1后面有38个1 1L << 39 -1
+// 但是xv6 只使用了其中的39位中的38位置
+//   1111111*38 10000*39
+// 因此最大的合法地址(1L << 38)-1
+// MAXVA = 最大合法地址 + 1
+// MAXVA 的含义就是第一个非法地址
 
 typedef uint64 pte_t;
 typedef uint64 *pagetable_t; // 512 PTEs
