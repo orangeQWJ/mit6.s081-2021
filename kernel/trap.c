@@ -37,7 +37,10 @@ void
 usertrap(void)
 {
   int which_dev = 0;
-
+	// 将发生异常之前的权限模式保留在SSTATUS寄存器的SPP位中
+	// 之前是用户态的话SPP==0
+	//当 SPP 为 0时，表示上一个模式是用户模式（U-mode）；
+	//当 SPP 为 1 时，表示上一个模式是监管者模式（S-mode）。此外，SSTATUS 中的             
   if((r_sstatus() & SSTATUS_SPP) != 0)
     panic("usertrap: not from user mode");
 
@@ -62,6 +65,7 @@ usertrap(void)
 
     // an interrupt will change sstatus &c registers,
     // so don't enable until done with those registers.
+	// 开中断,为什么这个时候可以开启中断
     intr_on();
 
     syscall();

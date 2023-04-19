@@ -26,6 +26,8 @@ uservec:
         
 	# swap a0 and sscratch
         # so that a0 is TRAPFRAME
+
+		# sscratch 是什么时候设置的?  sscratch -> proc.trapframe
         csrrw a0, sscratch, a0
 
         # save the user registers in TRAPFRAME
@@ -38,6 +40,7 @@ uservec:
         sd t2, 88(a0)
         sd s0, 96(a0)
         sd s1, 104(a0)
+		# 跳过存储a0
         sd a1, 120(a0)
         sd a2, 128(a0)
         sd a3, 136(a0)
@@ -59,6 +62,7 @@ uservec:
         sd t4, 264(a0)
         sd t5, 272(a0)
         sd t6, 280(a0)
+		# 至此除了a0寄存器外都已经存入trapframe结构体
 
 	# save the user a0 in p->trapframe->a0
         csrr t0, sscratch
@@ -66,6 +70,8 @@ uservec:
 	# 至此所有的寄存器都被保存到trapframe中了
 
         # restore kernel stack pointer from p->trapframe->kernel_sp
+		# 每个进程进入内核后使用自己的内核栈
+		# 内核没有自己的栈吗?
         ld sp, 8(a0)
 
         # make tp hold the current hartid, from p->trapframe->kernel_hartid
@@ -75,9 +81,15 @@ uservec:
         ld t0, 16(a0)
 
         # restore kernel page table from p->trapframe->kernel_satp
+		# 手动更换到内核页表
         ld t1, 0(a0)
+
+		# t1 值写入satp
         csrw satp, t1
+		# 清空TLB缓存 va -> pa TLB 虚拟页号->物理页号 
         sfence.vma zero, zero
+
+		# 看一下页表 <C-a-c> info mem
 
         # a0 is no longer valid, since the kernel page
         # table does not specially map p->tf.
@@ -100,7 +112,9 @@ userret:
         # put the saved user a0 in sscratch, so we
         # can swap it with our a0 (TRAPFRAME) in the last step.
         ld t0, 112(a0)
+		# t0 == a0 返回值
         csrw sscratch, t0
+		# sscratch == 返回值
 
         # restore all but a0 from TRAPFRAME
         ld ra, 40(a0)
@@ -112,6 +126,7 @@ userret:
         ld t2, 88(a0)
         ld s0, 96(a0)
         ld s1, 104(a0)
+		# 跳过a0
         ld a1, 120(a0)
         ld a2, 128(a0)
         ld a3, 136(a0)
@@ -139,4 +154,6 @@ userret:
         
         # return to user mode and user pc.
         # usertrapret() set up sstatus and sepc.
+		# 开启中断
+		# sret的行为收到sstatus寄存器影响
         sret
