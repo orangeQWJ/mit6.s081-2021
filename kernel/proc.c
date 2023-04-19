@@ -315,6 +315,9 @@ fork(void)
   np->state = RUNNABLE;
   release(&np->lock);
 
+
+  // 将追踪掩码从父进程复制到子进程
+  np->trace_mask = p->trace_mask;
   return pid;
 }
 
