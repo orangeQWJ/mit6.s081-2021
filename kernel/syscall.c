@@ -105,6 +105,7 @@ extern uint64 sys_wait(void);
 extern uint64 sys_write(void);
 extern uint64 sys_uptime(void);
 extern uint64 sys_trace(void);
+extern uint64 sys_sysinfo(void);
 
 // 函数指针数组
 static uint64 (*syscalls[])(void) = {
@@ -130,6 +131,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
 [SYS_trace]   sys_trace,
+[SYS_sysinfo]   sys_sysinfo,
 };
 
 char * syscall_name[] = {
@@ -155,6 +157,7 @@ char * syscall_name[] = {
 	[20] "mkdir" ,
 	[21] "close" ,
 	[22] "trace" ,
+	[23] "sys_info" ,
 };
 
 void
